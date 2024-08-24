@@ -8,11 +8,14 @@ services:
       - MYSQL_USER=wpdb
       - MYSQL_PASSWORD=root1
       - MYSQL_DATABASE=wpdb 
+    networks:
+      - wp_default
     volumes:
       - db_vol:/var/lib/mysql  
+
   wordpress:
     depends_on:
-    - database
+      - database
     image: quay.io/andrekley/wp-cards:v1
     ports:
       - "8090:80"
@@ -24,21 +27,23 @@ services:
       - WORDPRESS_DB_PASSWORD=root1  
     volumes:
       - wp_vol:/var/www/html
-networks:
-  backend-net:
-    driver: overlay
-    driver_opts:
-      encrypted: ""
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.wordpress.rule=Host(`kley.advbr.app`)"
+      - "traefik.http.services.wordpress.loadbalancer.server.port=80"
+      - "traefik.http.routers.wordpress.service=wordpress"
+      - "traefik.http.routers.wordpress.entrypoints=websecure"
+      - "traefik.http.routers.wordpress.tls.certresolver=le"
+      - "traefik.http.routers.wordpress.tls=true"
+    networks:
+      - traefik_default
+      - wp_default  
 
-deploy:
-      labels:
-        - "traefik.enable=true"
-        - "traefik.http.routers.wordpress.rule=Host(`kley.advbr.app`)"
-        - "traefik.http.services.wordpress.loadbalancer.server.port=8090"
-        - "traefik.http.routers.wordpress.service=wordpress"
-        - "traefik.http.routers.wordpress.entrypoints=websecure"
-        - "traefik.http.routers.wordpress.tls.certresolver=le"
-        - "traefik.http.routers.wordpress.tls=true"
+networks:
+  traefik_default:
+    external: true
+  wp_default:
+    driver: overlay
 
 volumes:
   db_vol:
