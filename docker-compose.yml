@@ -1,6 +1,5 @@
 version: '3.8'
 
-# mais info: https://youtu.be/o7tBbYy-5I4
 services:
   traefik:
     image: traefik:v2.11
@@ -10,23 +9,20 @@ services:
       - --entrypoints.websecure.address=:443
       - --providers.docker.exposedbydefault=false
       - --providers.docker.swarmMode=true
-      #defina a mesma rede que você criou para o traefik
       - --providers.docker.network=traefik_public
       - --providers.docker.endpoint=unix:///var/run/docker.sock
-      # Config para SSL Lets Encrypt
-      # altere para seu e-mail
       - --certificatesresolvers.le.acme.httpchallenge.entrypoint=web
       - --certificatesresolvers.le.acme.email=gigakley@gmail.com
       - --certificatesresolvers.le.acme.storage=/letsencrypt/acme.json
       - --certificatesresolvers.le.acme.tlschallenge=true
-      # Global HTTP -> HTTPS
+      # Uncomment the following lines if you want to enable global HTTP -> HTTPS redirection and the Traefik dashboard
       #- --entrypoints.web.http.redirections.entryPoint.to=websecure
       #- --entrypoints.web.http.redirections.entryPoint.scheme=https
       #- --api
       #- --log.level=DEBUG
     ports:
       - "80:80"
-      #- "8080:8080" # porta do painel do traefik, caso queira ver todas as rotas.
+      #- "8080:8080" # Uncomment if you want to enable the Traefik dashboard on port 8080
       - "443:443"
     volumes:
       - traefik_certificates:/letsencrypt
