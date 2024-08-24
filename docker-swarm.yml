@@ -1,48 +1,45 @@
-version: "3.9"
-services:
-  web:
-    image: nginx:latest
-    volumes:
-      # - ./html:/usr/share/nginx/html:ro
-      - ./html/index.html:/usr/share/nginx/html/index.html:ro
-    networks:
-      - global
-    deploy:
-      replicas: 2
-      resources:
-        limits:
-          cpus: "1"
-          memory: 1G
-          # pids: 100
-        reservations:
-          cpus: "0.1"
-          memory: 20M
-      restart_policy:
-        condition: on-failure
-    ports:
-      - "80:80"
+version: "3.8"
 
-  web-alt:
-    image: nginx:latest
+services:
+  database:
+    image: quay.io/andrekley/db-card:v1
+    environment:
+      - MYSQL_ROOT_PASSWORD=root_
+      - MYSQL_USER=wpdb
+      - MYSQL_PASSWORD=root1
+      - MYSQL_DATABASE=wpdb 
     volumes:
-      # - ./html:/usr/share/nginx/html:ro
-      - ./html/index-alt.html:/usr/share/nginx/html/index.html:ro
-    networks:
-      - global
-    deploy:
-      replicas: 4
-      resources:
-        limits:
-          cpus: "1"
-          memory: 1G
-          # pids: 100
-        reservations:
-          cpus: "0.1"
-          memory: 20M
-      restart_policy:
-        condition: on-failure
+      - db_vol:/var/lib/mysql  
+  wordpress:
+    depends_on:
+    - database
+    image: quay.io/andrekley/wp-cards:v1
     ports:
-      - "8080:80"
+      - "8090:80"
+    restart: always
+    environment:
+      - WORDPRESS_DB_HOST=database:3306
+      - WORDPRESS_DB_USER=wpdb
+      - WORDPRESS_DB_NAME=wpdb
+      - WORDPRESS_DB_PASSWORD=root1  
+    volumes:
+      - wp_vol:/var/www/html
 networks:
-  global:
+  backend-net:
     driver: overlay
+    driver_opts:
+      encrypted: ""
+
+deploy:
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.wordpress.rule=Host(`kley.advbr.app`)"
+        - "traefik.http.services.wordpress.loadbalancer.server.port=8090"
+        - "traefik.http.routers.wordpress.service=wordpress"
+        - "traefik.http.routers.wordpress.entrypoints=websecure"
+        - "traefik.http.routers.wordpress.tls.certresolver=le"
+        - "traefik.http.routers.wordpress.tls=true"
+
+volumes:
+  db_vol:
+  wp_vol:
