@@ -1,34 +1,49 @@
-version: "3.3"
+version: '3.8'
 
+# mais info: https://youtu.be/o7tBbYy-5I4
 services:
-
   traefik:
-    image: "traefik:v3.1"
-    container_name: "traefik"
+    image: traefik:v2.11
     command:
-      #- "--log.level=DEBUG"
-      - "--api.insecure=true"
-      - "--providers.docker=true"
-      - "--providers.docker.exposedbydefault=false"
-      - "--entryPoints.web.address=:80"
+      - --providers.docker=true
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+      - --providers.docker.exposedbydefault=false
+      - --providers.docker.swarmMode=true
+      #defina a mesma rede que você criou para o traefik
+      - --providers.docker.network=traefik_public
+      - --providers.docker.endpoint=unix:///var/run/docker.sock
+      # Config para SSL Lets Encrypt
+      # altere para seu e-mail
+      - --certificatesresolvers.le.acme.httpchallenge.entrypoint=web
+      - --certificatesresolvers.le.acme.email=gigakley@gmail.com
+      - --certificatesresolvers.le.acme.storage=/letsencrypt/acme.json
+      - --certificatesresolvers.le.acme.tlschallenge=true
+      # Global HTTP -> HTTPS
+      #- --entrypoints.web.http.redirections.entryPoint.to=websecure
+      #- --entrypoints.web.http.redirections.entryPoint.scheme=https
+      #- --api
+      #- --log.level=DEBUG
     ports:
-       - target: 80
-         published: 80
-         protocol: tcp
-         mode: host
-       - target: 443
-         published: 443
-         protocol: tcp
-         mode: host
-
-
+      - "80:80"
+      #- "8080:8080" # porta do painel do traefik, caso queira ver todas as rotas.
+      - "443:443"
     volumes:
+      - traefik_certificates:/letsencrypt
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+    networks:
+      - traefik_public
 
-  whoami:
-    image: "traefik/whoami"
-    container_name: "simple-service"
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.whoami.rule=Host(`whoami.localhost`)"
-      - "traefik.http.routers.whoami.entrypoints=web"
+volumes:
+  traefik_certificates:
+    external: true
+
+networks:
+  traefik_public:
+    external: true
