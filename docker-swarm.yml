@@ -17,8 +17,8 @@ services:
     depends_on:
       - database
     image: quay.io/andrekley/wp-cards:v1
-    ports:
-      - "8090:80"
+    # ports:
+    #   - "8090:80"
     restart: always
     environment:
       - WORDPRESS_DB_HOST=database:3306
